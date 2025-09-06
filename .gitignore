@@ -1,0 +1,35 @@
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+ENV/
+.env/
+.venv/
+
+# Environment files
+.env
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+
+# Logs
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.swp
+*.swo
+*~
+
+# Custom project files
+all_code.txt
+dummy.py
