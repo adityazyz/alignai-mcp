@@ -1,4 +1,3 @@
-# ./tools/database_tools.py
 import httpx
 import os
 from datetime import datetime
@@ -10,6 +9,8 @@ logger = logging.getLogger(__name__)
 
 # Base URL for Node.js backend
 NODE_API_URL = os.getenv("NODE_API_URL", "http://localhost:3333")
+# Backend auth token from environment variable
+BACKEND_AUTH_TOKEN = os.getenv("BACKEND_OUTGOING_AUTH_TOKEN", "")
 
 async def fetch_meeting_record(meeting_id: str, auth_token: str) -> Dict:
     """
@@ -26,8 +27,11 @@ async def fetch_meeting_record(meeting_id: str, auth_token: str) -> Dict:
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(
-                f"{NODE_API_URL}/core/meeting/info-for-mcp/{meeting_id}",
-                headers={"Authorization": f"Bearer {auth_token}"}
+                f"{NODE_API_URL}/mcp/meeting/info-for-mcp/{meeting_id}",
+                headers={
+                    "Authorization": f"Bearer {auth_token}",
+                    "Backend-Auth-Token": BACKEND_AUTH_TOKEN
+                }
             )
             response.raise_for_status()
             storedResponse = response.json()
@@ -60,7 +64,10 @@ async def fetch_department_members(department_id: str) -> List[Dict]:
     """
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(f"{NODE_API_URL}/core/department/fetch-all-members/{department_id}")
+            response = await client.get(
+                f"{NODE_API_URL}/mcp/department/fetch-all-members/{department_id}",
+                headers={"Backend-Auth-Token": BACKEND_AUTH_TOKEN}
+            )
             response.raise_for_status()
             members = response.json()
             logger.debug(f"Fetched department members: {members}")
@@ -90,7 +97,10 @@ async def fetch_organization_members(organization_id: str) -> List[Dict]:
     """
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(f"{NODE_API_URL}/core/organization/fetch-all-members/{organization_id}")
+            response = await client.get(
+                f"{NODE_API_URL}/mcp/organization/fetch-all-members/{organization_id}",
+                headers={"Backend-Auth-Token": BACKEND_AUTH_TOKEN}
+            )
             response.raise_for_status()
             members = response.json()
             logger.debug(f"Fetched organization members: {members}")
@@ -133,8 +143,12 @@ async def create_meeting_summary(initial_data: Union[Dict, MeetingSummary]) -> s
                 "actionItems": data.get("actionItems", [])
             }
             
-            logger.debug(f"Sending meeting summary to {NODE_API_URL}/core/summary/create: {payload}")
-            response = await client.post(f"{NODE_API_URL}/core/summary/create", json=payload)
+            logger.debug(f"Sending meeting summary to {NODE_API_URL}/mcp/summary/create: {payload}")
+            response = await client.post(
+                f"{NODE_API_URL}/mcp/summary/create",
+                json=payload,
+                headers={"Backend-Auth-Token": BACKEND_AUTH_TOKEN}
+            )
             response.raise_for_status()
             
             response_data = response.json()
@@ -177,14 +191,17 @@ async def update_meeting_summary(summary_id: str, data: Union[Dict, MeetingSumma
                 update_payload["actionItems"] = data_dict["actionItems"]
             
             logger.debug(f"Updating meeting summary {summary_id}: {update_payload}")
-            response = await client.put(f"{NODE_API_URL}/core/summary/update/{summary_id}", json=update_payload)
+            response = await client.put(
+                f"{NODE_API_URL}/mcp/summary/update/{summary_id}",
+                json=update_payload,
+                headers={"Backend-Auth-Token": BACKEND_AUTH_TOKEN}
+            )
             response.raise_for_status()
             logger.info(f"Successfully updated meeting summary {summary_id}")
             return True
         except httpx.HTTPError as e:
             logger.error(f"Failed to update meeting summary {summary_id}: {str(e)}. Response: {e.response.text if hasattr(e, 'response') else 'No response'}")
             return False
-
 
 async def create_tasks(initial_tasks: List[Union[Dict, Task]]) -> List[str]:
     """
@@ -247,7 +264,11 @@ async def create_tasks(initial_tasks: List[Union[Dict, Task]]) -> List[str]:
             payload = {"initial_tasks": tasks}
             
             logger.debug(f"Creating tasks with payload: {payload}")
-            response = await client.post(f"{NODE_API_URL}/core/task/bulk-create", json=payload)
+            response = await client.post(
+                f"{NODE_API_URL}/mcp/task/bulk-create",
+                json=payload,
+                headers={"Backend-Auth-Token": BACKEND_AUTH_TOKEN}
+            )
             
             # Log the full response for debugging
             logger.debug(f"Task creation response status: {response.status_code}")
@@ -271,63 +292,6 @@ async def create_tasks(initial_tasks: List[Union[Dict, Task]]) -> List[str]:
         except Exception as e:
             logger.error(f"Unexpected error creating tasks: {str(e)}")
             return []
-
-
-async def update_tasks(task_ids: List[str], tasks: List[Union[Dict, Task]]) -> bool:
-    """
-    Update tasks by sending a PUT request to the Node.js backend.
-
-    Args:
-        task_ids: List of task IDs to update.
-        tasks: List of dictionaries or Task Pydantic models with updated fields.
-
-    Returns:
-        bool: True if the update was successful, False otherwise.
-    """
-    async with httpx.AsyncClient() as client:
-        try:
-            updates = []
-            for task_id, task_data in zip(task_ids, tasks):
-                if isinstance(task_data, Task):
-                    task_dict = task_data.model_dump()
-                else:
-                    task_dict = task_data.copy()
-                
-                # Prepare update payload - only include fields that can be updated
-                update_data = {"id": task_id}
-                
-                if "departmentId" in task_dict:
-                    update_data["departmentId"] = task_dict["departmentId"]
-                if "title" in task_dict:
-                    update_data["title"] = task_dict["title"]
-                if "description" in task_dict:
-                    update_data["description"] = task_dict["description"]
-                if "assignedToId" in task_dict:
-                    update_data["assignedToId"] = task_dict["assignedToId"]
-                if "reportToId" in task_dict:
-                    update_data["reportToId"] = task_dict["reportToId"]
-                if "status" in task_dict:
-                    update_data["status"] = task_dict["status"]
-                if "priority" in task_dict:
-                    update_data["priority"] = task_dict["priority"]
-                if "highQualityCompletion" in task_dict:
-                    update_data["highQualityCompletion"] = task_dict["highQualityCompletion"]
-                if "deadline" in task_dict:
-                    update_data["deadline"] = task_dict["deadline"]
-                if "completedAt" in task_dict:
-                    update_data["completedAt"] = task_dict["completedAt"]
-                
-                updates.append(update_data)
-
-            payload = {"updates": updates}
-            logger.debug(f"Updating tasks with payload: {payload}")
-            response = await client.put(f"{NODE_API_URL}/core/task/bulk-update", json=payload)
-            response.raise_for_status()
-            logger.info(f"Successfully updated tasks: {task_ids}")
-            return True
-        except httpx.HTTPError as e:
-            logger.error(f"Failed to update tasks: {str(e)}. Response: {e.response.text if hasattr(e, 'response') else 'No response'}")
-            return False
 
 async def create_generated_content(initial_content_list: List[Union[Dict, GeneratedContent]]) -> List[str]:
     """
@@ -382,7 +346,11 @@ async def create_generated_content(initial_content_list: List[Union[Dict, Genera
             payload = {"contents": content_items}
             
             logger.debug(f"Creating generated content with payload: {payload}")
-            response = await client.post(f"{NODE_API_URL}/core/generated-content/bulk-create", json=payload)
+            response = await client.post(
+                f"{NODE_API_URL}/mcp/generated-content/bulk-create",
+                json=payload,
+                headers={"Backend-Auth-Token": BACKEND_AUTH_TOKEN}
+            )
             
             # Log the full response for debugging
             logger.debug(f"Content creation response status: {response.status_code}")
@@ -407,52 +375,110 @@ async def create_generated_content(initial_content_list: List[Union[Dict, Genera
             logger.error(f"Unexpected error creating generated content: {str(e)}")
             return []
 
-async def update_generated_content(content_ids: List[str], content_list: List[Union[Dict, GeneratedContent]]) -> bool:
-    """
-    Update multiple generated content items by sending a PUT request to the Node.js backend.
 
-    Args:
-        content_ids: List of content IDs to update.
-        content_list: List of dictionaries or GeneratedContent Pydantic models with updated fields.
+# async def update_tasks(task_ids: List[str], tasks: List[Union[Dict, Task]]) -> bool:
+#     """
+#     Update tasks by sending a PUT request to the Node.js backend.
 
-    Returns:
-        bool: True if the update was successful, False otherwise.
-    """
-    async with httpx.AsyncClient() as client:
-        try:
-            updates = []
-            for content_id, content_data in zip(content_ids, content_list):
-                if isinstance(content_data, GeneratedContent):
-                    content_dict = content_data.model_dump()
-                else:
-                    content_dict = content_data.copy()
-                
-                # Prepare update payload - only include fields that can be updated
-                update_data = {"id": content_id}
-                
-                if "departmentId" in content_dict:
-                    update_data["departmentId"] = content_dict["departmentId"]
-                if "type" in content_dict:
-                    update_data["type"] = content_dict["type"]
-                if "content" in content_dict:
-                    update_data["content"] = content_dict["content"]
-                if "subject" in content_dict:
-                    update_data["subject"] = content_dict["subject"]
-                if "recipientEmail" in content_dict:
-                    update_data["recipientEmail"] = content_dict["recipientEmail"]
-                if "metadata" in content_dict:
-                    update_data["metadata"] = content_dict["metadata"]
-                if "isArchived" in content_dict:
-                    update_data["isArchived"] = content_dict["isArchived"]
-                
-                updates.append(update_data)
+#     Args:
+#         task_ids: List of task IDs to update.
+#         tasks: List of dictionaries or Task Pydantic models with updated fields.
 
-            payload = {"updates": updates}
-            logger.debug(f"Updating generated content with payload: {payload}")
-            response = await client.put(f"{NODE_API_URL}/core/generated-content/bulk-update", json=payload)
-            response.raise_for_status()
-            logger.info(f"Successfully updated generated content: {content_ids}")
-            return True
-        except httpx.HTTPError as e:
-            logger.error(f"Failed to update generated content: {str(e)}. Response: {e.response.text if hasattr(e, 'response') else 'No response'}")
-            return False
+#     Returns:
+#         bool: True if the update was successful, False otherwise.
+#     """
+#     async with httpx.AsyncClient() as client:
+#         try:
+#             updates = []
+#             for task_id, task_data in zip(task_ids, tasks):
+#                 if isinstance(task_data, Task):
+#                     task_dict = task_data.model_dump()
+#                 else:
+#                     task_dict = task_data.copy()
+                
+#                 # Prepare update payload - only include fields that can be updated
+#                 update_data = {"id": task_id}
+                
+#                 if "departmentId" in task_dict:
+#                     update_data["departmentId"] = task_dict["departmentId"]
+#                 if "title" in task_dict:
+#                     update_data["title"] = task_dict["title"]
+#                 if "description" in task_dict:
+#                     update_data["description"] = task_dict["description"]
+#                 if "assignedToId" in task_dict:
+#                     update_data["assignedToId"] = task_dict["assignedToId"]
+#                 if "reportToId" in task_dict:
+#                     update_data["reportToId"] = task_dict["reportToId"]
+#                 if "status" in task_dict:
+#                     update_data["status"] = task_dict["status"]
+#                 if "priority" in task_dict:
+#                     update_data["priority"] = task_dict["priority"]
+#                 if "highQualityCompletion" in task_dict:
+#                     update_data["highQualityCompletion"] = task_dict["highQualityCompletion"]
+#                 if "deadline" in task_dict:
+#                     update_data["deadline"] = task_dict["deadline"]
+#                 if "completedAt" in task_dict:
+#                     update_data["completedAt"] = task_dict["completedAt"]
+                
+#                 updates.append(update_data)
+
+#             payload = {"updates": updates}
+#             logger.debug(f"Updating tasks with payload: {payload}")
+#             response = await client.put(f"{NODE_API_URL}/mcp/task/bulk-update", json=payload)
+#             response.raise_for_status()
+#             logger.info(f"Successfully updated tasks: {task_ids}")
+#             return True
+#         except httpx.HTTPError as e:
+#             logger.error(f"Failed to update tasks: {str(e)}. Response: {e.response.text if hasattr(e, 'response') else 'No response'}")
+#             return False
+
+
+# async def update_generated_content(content_ids: List[str], content_list: List[Union[Dict, GeneratedContent]]) -> bool:
+#     """
+#     Update multiple generated content items by sending a PUT request to the Node.js backend.
+
+#     Args:
+#         content_ids: List of content IDs to update.
+#         content_list: List of dictionaries or GeneratedContent Pydantic models with updated fields.
+
+#     Returns:
+#         bool: True if the update was successful, False otherwise.
+#     """
+#     async with httpx.AsyncClient() as client:
+#         try:
+#             updates = []
+#             for content_id, content_data in zip(content_ids, content_list):
+#                 if isinstance(content_data, GeneratedContent):
+#                     content_dict = content_data.model_dump()
+#                 else:
+#                     content_dict = content_data.copy()
+                
+#                 # Prepare update payload - only include fields that can be updated
+#                 update_data = {"id": content_id}
+                
+#                 if "departmentId" in content_dict:
+#                     update_data["departmentId"] = content_dict["departmentId"]
+#                 if "type" in content_dict:
+#                     update_data["type"] = content_dict["type"]
+#                 if "content" in content_dict:
+#                     update_data["content"] = content_dict["content"]
+#                 if "subject" in content_dict:
+#                     update_data["subject"] = content_dict["subject"]
+#                 if "recipientEmail" in content_dict:
+#                     update_data["recipientEmail"] = content_dict["recipientEmail"]
+#                 if "metadata" in content_dict:
+#                     update_data["metadata"] = content_dict["metadata"]
+#                 if "isArchived" in content_dict:
+#                     update_data["isArchived"] = content_dict["isArchived"]
+                
+#                 updates.append(update_data)
+
+#             payload = {"updates": updates}
+#             logger.debug(f"Updating generated content with payload: {payload}")
+#             response = await client.put(f"{NODE_API_URL}/mcp/generated-content/bulk-update",  json=payload)
+#             response.raise_for_status()
+#             logger.info(f"Successfully updated generated content: {content_ids}")
+#             return True
+#         except httpx.HTTPError as e:
+#             logger.error(f"Failed to update generated content: {str(e)}. Response: {e.response.text if hasattr(e, 'response') else 'No response'}")
+#             return False

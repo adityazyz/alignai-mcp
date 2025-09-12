@@ -79,14 +79,34 @@ def get_default_participant_id(participants: list) -> str:
     
     return "ai"
 
+def validate_subtasks(task: Task) -> Task:
+    """
+    Validate and clean up subtasks for a task.
+    """
+    if not hasattr(task, 'subtasks') or not task.subtasks:
+        return task
+    
+    # Remove empty or invalid subtasks
+    valid_subtasks = []
+    for subtask in task.subtasks:
+        if hasattr(subtask, 'content') and subtask.content and subtask.content.strip():
+            # Ensure the subtask content is professional and actionable
+            content = subtask.content.strip()
+            if len(content) > 5:  # Basic length check
+                valid_subtasks.append(subtask)
+    
+    task.subtasks = valid_subtasks
+    logger.debug(f"Task '{task.title}' validated with {len(valid_subtasks)} subtasks")
+    return task
+
 async def parallel_coordinator_node(state: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Coordinates parallel processing of summary, tasks, and content generation.
+    Enhanced coordinator that handles parallel processing with proper subtask validation.
     FIXED: No longer handles summary database operations - lets summary_generation_node handle updates.
-    Only creates tasks and content directly.
+    Only creates tasks and content directly with enhanced subtask support.
     """
     try:
-        logger.debug("Entering parallel_coordinator_node")
+        logger.debug("Entering enhanced parallel_coordinator_node with subtask support")
         
         # Extract required data from state
         transcription = state.get("transcription", "")
@@ -121,7 +141,7 @@ async def parallel_coordinator_node(state: Dict[str, Any]) -> Dict[str, Any]:
             task_names.append("content")
         
         # Execute content generation in parallel (excluding summary)
-        logger.debug("Starting parallel processing of tasks and content (summary handled separately)")
+        logger.debug("Starting parallel processing of enhanced tasks with subtasks and content")
         final_tasks = []
         final_content = []
         
@@ -139,6 +159,13 @@ async def parallel_coordinator_node(state: Dict[str, Any]) -> Dict[str, Any]:
                 else:
                     if task_name == "tasks":
                         final_tasks = result if isinstance(result, list) else [result] if result else []
+                        # Validate subtasks for each task
+                        final_tasks = [validate_subtasks(task) for task in final_tasks]
+                        
+                        # Log subtask statistics
+                        total_subtasks = sum(len(task.subtasks) for task in final_tasks)
+                        logger.info(f"Generated {len(final_tasks)} tasks with {total_subtasks} total subtasks")
+                        
                     elif task_name == "content":
                         final_content = result if isinstance(result, list) else [result] if result else []
         
@@ -149,7 +176,7 @@ async def parallel_coordinator_node(state: Dict[str, Any]) -> Dict[str, Any]:
                     # Try to find a better assignee from the task content or attendees
                     better_assignee = get_default_participant_id(participants)
                     task.assignedToId = better_assignee
-                    logger.debug(f"Updated task assignee from 'ai' to '{better_assignee}'")
+                    logger.debug(f"Updated task '{task.title}' assignee from 'ai' to '{better_assignee}'")
         
         if final_content:
             for content in final_content:
@@ -169,10 +196,17 @@ async def parallel_coordinator_node(state: Dict[str, Any]) -> Dict[str, Any]:
         creation_tasks = []
         creation_names = []
         
-        # Create task records - ensure we always pass a list
+        # Create task records - ensure we always pass a list with validated subtasks
         if final_tasks and tasks_detected:
             # Always pass as list even for single task
             tasks_to_create = final_tasks if isinstance(final_tasks, list) else [final_tasks]
+            
+            # Log detailed subtask information before database creation
+            for i, task in enumerate(tasks_to_create):
+                logger.debug(f"Task {i+1}: '{task.title}' has {len(task.subtasks)} subtasks:")
+                for j, subtask in enumerate(task.subtasks):
+                    logger.debug(f"  Subtask {j+1}: {subtask.content}")
+            
             creation_tasks.append(create_tasks(tasks_to_create))
             creation_names.append("tasks")
         
@@ -198,11 +232,13 @@ async def parallel_coordinator_node(state: Dict[str, Any]) -> Dict[str, Any]:
                 else:
                     if creation_name == "tasks":
                         initial_ids["task_ids"] = result if isinstance(result, list) else [result] if result else []
+                        logger.info(f"Successfully created {len(initial_ids['task_ids'])} tasks with subtasks in database")
                     elif creation_name == "content":
                         # Now expect a list of IDs from bulk creation
                         initial_ids["content_ids"] = result if isinstance(result, list) else [result] if result else []
+                        logger.info(f"Successfully created {len(initial_ids['content_ids'])} content items in database")
         
-        logger.debug(f"Parallel coordinator completed. Task IDs: {initial_ids.get('task_ids', [])}, Content IDs: {initial_ids.get('content_ids', [])}")
+        logger.debug(f"Enhanced parallel coordinator completed. Task IDs: {initial_ids.get('task_ids', [])}, Content IDs: {initial_ids.get('content_ids', [])}")
         logger.debug(f"Summary will be handled by summary_generation_node using existing ID: {initial_ids.get('summary_id', 'NOT_FOUND')}")
         
         # Update state with results (no summary data here - that's handled by summary_generation_node)
@@ -210,21 +246,27 @@ async def parallel_coordinator_node(state: Dict[str, Any]) -> Dict[str, Any]:
         updated_state["initial_ids"] = initial_ids
         updated_state["tasks"] = [task.model_dump() for task in final_tasks] if final_tasks else []
         updated_state["generatedContent"] = [content.model_dump() for content in final_content] if final_content else []
-        updated_state["messages"] = state.get("messages", []) + ["Parallel processing of tasks and content completed"]
+        updated_state["messages"] = state.get("messages", []) + ["Enhanced parallel processing with subtasks completed"]
         updated_state["status"] = "pending"
         
-        logger.info("Parallel processing completed successfully - summary will be handled by summary_generation_node")
+        # Add subtask statistics to the message
+        if final_tasks:
+            total_subtasks = sum(len(task.subtasks) for task in final_tasks)
+            avg_subtasks = total_subtasks / len(final_tasks) if final_tasks else 0
+            updated_state["messages"][-1] += f" ({len(final_tasks)} tasks, {total_subtasks} subtasks, avg {avg_subtasks:.1f} subtasks/task)"
+        
+        logger.info("Enhanced parallel processing completed successfully with comprehensive subtask support")
         return updated_state
         
     except Exception as e:
-        logger.error(f"Parallel processing failed: {str(e)}")
+        logger.error(f"Enhanced parallel processing failed: {str(e)}")
         error_state = state.copy()
         error_state["status"] = "failure"
-        error_state["messages"] = state.get("messages", []) + [f"Parallel processing failed: {str(e)}"]
+        error_state["messages"] = state.get("messages", []) + [f"Enhanced parallel processing failed: {str(e)}"]
         return error_state
 
 async def generate_tasks_task(transcription: str, attendees: list, participants: list, organization_id: str, department_id: str) -> list:
-    """Generate tasks in a separate task"""
+    """Generate enhanced tasks with subtasks in a separate task"""
     return await generate_tasks(transcription, attendees, participants, organization_id, department_id)
 
 async def generate_content_task(transcription: str, content_details: dict, attendees: list, participants: list, organization_id: str, department_id: str) -> list:

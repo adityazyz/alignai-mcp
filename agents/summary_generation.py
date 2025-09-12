@@ -83,7 +83,7 @@ def fuzzy_match_attendees(attendees: List[str], participants: List[Dict[str, Any
                     best_match = participant
         
         if best_match:
-            # Include full participant data
+            # Include full participant data - FIXED: Handle None values properly
             attendee_data = {
                 "name": attendee_name,
                 "id": best_match.get("id"),
@@ -91,12 +91,12 @@ def fuzzy_match_attendees(attendees: List[str], participants: List[Dict[str, Any
                 "firstName": best_match.get("firstName"),
                 "lastName": best_match.get("lastName"),
                 "email": best_match.get("email"),
-                "role": best_match.get("role"),
-                "department": best_match.get("department"),
-                "matchConfidence": best_score
+                "role": best_match.get("role", ""),  # Default to empty string instead of None
+                "department": best_match.get("department", ""),  # Default to empty string instead of None
+                "matchConfidence": str(best_score)  # Convert float to string
             }
         else:
-            # No match found, keep basic info
+            # No match found, keep basic info - FIXED: Use empty strings instead of None
             attendee_data = {
                 "name": attendee_name,
                 "id": None,
@@ -104,9 +104,9 @@ def fuzzy_match_attendees(attendees: List[str], participants: List[Dict[str, Any
                 "firstName": None,
                 "lastName": None,
                 "email": None,
-                "role": None,
-                "department": None,
-                "matchConfidence": 0.0
+                "role": "",  # Empty string instead of None
+                "department": "",  # Empty string instead of None
+                "matchConfidence": "0.0"  # String instead of float
             }
         
         matched_attendees.append(attendee_data)
@@ -178,9 +178,9 @@ For each attendee, find the best matching participant and provide the full parti
                     "firstName": match.matched_participant.get("firstName"),
                     "lastName": match.matched_participant.get("lastName"),
                     "email": match.matched_participant.get("email"),
-                    "role": None,  # Add if available in participants
-                    "department": None,  # Add if available in participants
-                    "matchConfidence": match.confidence
+                    "role": match.matched_participant.get("role", ""),  # Default to empty string
+                    "department": match.matched_participant.get("department", ""),  # Default to empty string
+                    "matchConfidence": str(match.confidence)  # Convert to string
                 }
             else:
                 attendee_data = {
@@ -190,9 +190,9 @@ For each attendee, find the best matching participant and provide the full parti
                     "firstName": None,
                     "lastName": None,
                     "email": None,
-                    "role": None,
-                    "department": None,
-                    "matchConfidence": match.confidence if match.matched_participant else 0.0
+                    "role": "",  # Empty string instead of None
+                    "department": "",  # Empty string instead of None
+                    "matchConfidence": str(match.confidence) if match.matched_participant else "0.0"
                 }
             
             matched_attendees.append(attendee_data)
@@ -208,11 +208,31 @@ For each attendee, find the best matching participant and provide the full parti
 def process_attendees_with_participants(attendees: List[Any], participants: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Process attendees list and match with participants data
+    FIXED: Handle organization-level meetings with no department_id properly
     """
     if not participants:
         logger.warning("No participants data provided for matching")
         # Convert attendees to standard format if they're just names
-        return [{"name": att.get("name", att) if isinstance(att, dict) else att} for att in attendees]
+        processed_attendees = []
+        for att in attendees:
+            if isinstance(att, dict):
+                att_copy = att.copy()
+                # Ensure required fields are not None
+                if att_copy.get('role') is None:
+                    att_copy['role'] = ""
+                if att_copy.get('department') is None:
+                    att_copy['department'] = ""
+                if att_copy.get('matchConfidence') is not None:
+                    att_copy['matchConfidence'] = str(att_copy['matchConfidence'])
+                processed_attendees.append(att_copy)
+            else:
+                processed_attendees.append({
+                    "name": str(att),
+                    "role": "",
+                    "department": "",
+                    "matchConfidence": "0.0"
+                })
+        return processed_attendees
     
     # Extract attendee names
     attendee_names = []
@@ -225,21 +245,49 @@ def process_attendees_with_participants(attendees: List[Any], participants: List
     # Use fuzzy matching as primary method (faster and more reliable for most cases)
     matched_attendees = fuzzy_match_attendees(attendee_names, participants)
     
-    logger.info(f"Matched {len(matched_attendees)} attendees with participant data")
+    # CRITICAL FIX: Ensure all attendee data has proper types and no None values
+    for attendee in matched_attendees:
+        # Fix role and department None values
+        if attendee.get('role') is None:
+            attendee['role'] = ""
+        if attendee.get('department') is None:
+            attendee['department'] = ""
+        # Ensure matchConfidence is a string
+        if isinstance(attendee.get('matchConfidence'), (int, float)):
+            attendee['matchConfidence'] = str(attendee['matchConfidence'])
+        elif attendee.get('matchConfidence') is None:
+            attendee['matchConfidence'] = "0.0"
+    
+    logger.info(f"Matched {len(matched_attendees)} attendees with participant data (organization-level meeting support)")
     return matched_attendees
 
 async def generate_summary(transcription: str, attendees: list, participants: list, organization_id: str, department_id: str, meeting_date: str) -> MeetingSummary:
-    """Core summary generation logic with enhanced attendee matching"""
+    """Core summary generation logic with enhanced attendee matching and improved length controls"""
     try:
-        # Process attendees with participant data
+        # Process attendees with participant data - FIXED for organization-level meetings
         enhanced_attendees = process_attendees_with_participants(attendees, participants)
         
         # Create attendee string for prompt (just names for context)
         attendees_str = ", ".join([att["name"] for att in enhanced_attendees])
         
-        # Generate summary without structured output
+        # Generate summary with improved prompting for length control
         prompt = ChatPromptTemplate.from_messages([
-            ("system", """Generate a concise meeting summary including key points, decisions, and action items based on the transcription. Use provided attendees for context. Return ONLY a JSON object with fields: organizationId (str), departmentId (str or null), createdById (str), title (str), summary (str), meetingDate (str), attendees (array of attendee objects), actionItems ([{{description: str, assignee: str}}]). Do NOT include any additional text, markdown, or explanations outside the JSON object."""),
+            ("system", """Generate a comprehensive meeting summary based on the transcription. Follow these requirements:
+
+TITLE: Create a concise, specific title (3-6 words max) that captures the main topic or purpose of the meeting.
+
+SUMMARY: Write a detailed summary of 100-200 words that includes:
+- Brief overview of the meeting purpose and context
+- Key topics discussed with specific details
+- Important decisions made and their rationale
+- Significant insights, concerns, or outcomes
+- Next steps or follow-up actions mentioned
+
+ACTION ITEMS: Extract specific, actionable tasks with clear assignees when mentioned.
+
+Return ONLY a JSON object with fields: organizationId (str), departmentId (str or null), createdById (str), title (str), summary (str), meetingDate (str), attendees (array of attendee objects), actionItems ([{{description: str, assignee: str}}]). 
+
+Keep the title concise but the summary comprehensive and within 100-200 words. Do NOT include any additional text, markdown, or explanations outside the JSON object."""),
             ("user", "Transcription: {transcription}\nAttendees: {attendees_str}\nOrganizationId: {organization_id}")
         ])
         chain = prompt | llm
@@ -285,21 +333,47 @@ async def generate_summary(transcription: str, attendees: list, participants: li
         summary_data.meetingDate = meeting_date
         summary_data.attendees = enhanced_attendees  # Use enhanced attendees with full participant data
 
-        # Iterative refinement (2 iterations for speed)
+        # Iterative refinement (2 iterations for speed) with improved length control
         for i in range(2):
             try:
-                # Critique
+                # Critique with length considerations
                 critique_prompt = ChatPromptTemplate.from_messages([
-                    ("system", "Critique the summary for accuracy, completeness, conciseness, and relevance. Suggest improvements."),
-                    ("user", "Summary: {summary}")
+                    ("system", """Critique the meeting summary for:
+                    1. Title conciseness (should be 3-6 words, specific to meeting topic)
+                    2. Summary completeness and length (should be 100-200 words with key details)
+                    3. Accuracy of information from transcription
+                    4. Clarity and professional tone
+                    5. Action items relevance and specificity
+                    
+                    Suggest specific improvements for length, detail, and accuracy."""),
+                    ("user", "Summary to critique:\nTitle: {title}\nSummary: {summary}\nAction Items: {action_items}")
                 ])
                 critique_chain = critique_prompt | llm
-                critique = await critique_chain.ainvoke({"summary": summary_data.summary})
+                critique = await critique_chain.ainvoke({
+                    "title": summary_data.title,
+                    "summary": summary_data.summary,
+                    "action_items": json.dumps([item.__dict__ if hasattr(item, '__dict__') else item for item in summary_data.actionItems])
+                })
 
-                # Refine
+                # Refine with specific length requirements
                 refine_prompt = ChatPromptTemplate.from_messages([
-                    ("system", """Refine the meeting summary based on the critique, keeping it concise and relevant. Ensure all key points, decisions, and action items from the transcription are included. Return ONLY a JSON object with fields: organizationId (str), departmentId (str or null), createdById (str), title (str), summary (str), meetingDate (str), attendees (array of attendee objects), actionItems ([{{description: str, assignee: str}}]). Do NOT include any additional text, markdown, or explanations outside the JSON object."""),
-                    ("user", "Transcription: {transcription}\nAttendees: {attendees_str}\nOrganizationId: {organization_id}\nCritique: {critique}")
+                    ("system", """Refine the meeting summary based on the critique. Requirements:
+
+TITLE: Make it concise (3-6 words) and specific to the main meeting topic or purpose.
+
+SUMMARY: Expand to 100-200 words covering:
+- Meeting context and purpose
+- Key discussion points with details
+- Decisions made and reasoning
+- Important insights or concerns raised
+- Next steps or outcomes
+
+ACTION ITEMS: Keep specific and actionable with clear assignees.
+
+Return ONLY a JSON object with fields: organizationId (str), departmentId (str or null), createdById (str), title (str), summary (str), meetingDate (str), attendees (array of attendee objects), actionItems ([{{description: str, assignee: str}}]). 
+
+Ensure the summary is comprehensive within 100-200 words while keeping the title brief. Do NOT include any additional text, markdown, or explanations outside the JSON object."""),
+                    ("user", "Original transcription: {transcription}\nAttendees: {attendees_str}\nOrganizationId: {organization_id}\nCritique: {critique}")
                 ])
                 refine_chain = refine_prompt | llm
                 
@@ -323,7 +397,14 @@ async def generate_summary(transcription: str, attendees: list, participants: li
                 # Parse refine JSON output
                 try:
                     summary_data_dict = json.loads(json_str)
-                    summary_data = MeetingSummary(**summary_data_dict)
+                    refined_summary = MeetingSummary(**summary_data_dict)
+                    
+                    # Validate word count for summary (100-200 words)
+                    word_count = len(refined_summary.summary.split())
+                    if 100 <= word_count <= 200:
+                        summary_data = refined_summary
+                    else:
+                        logger.info(f"Summary word count ({word_count}) outside target range, keeping previous version")
                     
                     # Reapply required fields and enhanced attendees
                     summary_data.organizationId = organization_id
@@ -340,6 +421,22 @@ async def generate_summary(transcription: str, attendees: list, participants: li
                 logger.warning(f"Refinement iteration {i+1} failed: {refinement_error}. Continuing with current summary.")
                 break
 
+        # Final validation and logging
+        final_word_count = len(summary_data.summary.split())
+        logger.info(f"Final summary: {len(summary_data.title.split())} words in title, {final_word_count} words in summary")
+        
+        # CRITICAL: Final validation of attendee data before returning
+        for attendee in summary_data.attendees:
+            if isinstance(attendee, dict):
+                if attendee.get('role') is None:
+                    attendee['role'] = ""
+                if attendee.get('department') is None:
+                    attendee['department'] = ""
+                if isinstance(attendee.get('matchConfidence'), (int, float)):
+                    attendee['matchConfidence'] = str(attendee['matchConfidence'])
+                elif attendee.get('matchConfidence') is None:
+                    attendee['matchConfidence'] = "0.0"
+        
         return summary_data
         
     except Exception as e:
@@ -348,7 +445,21 @@ async def generate_summary(transcription: str, attendees: list, participants: li
         try:
             enhanced_attendees = process_attendees_with_participants(attendees, participants)
         except:
-            enhanced_attendees = attendees
+            enhanced_attendees = []
+            for att in attendees:
+                if isinstance(att, dict):
+                    att_copy = att.copy()
+                    att_copy['role'] = att_copy.get('role', "")
+                    att_copy['department'] = att_copy.get('department', "")
+                    att_copy['matchConfidence'] = str(att_copy.get('matchConfidence', 0.0))
+                    enhanced_attendees.append(att_copy)
+                else:
+                    enhanced_attendees.append({
+                        "name": str(att),
+                        "role": "",
+                        "department": "",
+                        "matchConfidence": "0.0"
+                    })
             
         return MeetingSummary(
             organizationId=organization_id,
@@ -362,7 +473,7 @@ async def generate_summary(transcription: str, attendees: list, participants: li
         )
 
 async def summary_generation_node(state: Dict[str, Any]) -> Dict[str, Any]:
-    """Updated node that generates final summary with enhanced attendee data"""
+    """Updated node that generates final summary with enhanced attendee data and improved length controls"""
     try:
         logger.debug("Entering summary_generation_node")
         transcription = state.get("transcription", "")
@@ -380,8 +491,8 @@ async def summary_generation_node(state: Dict[str, Any]) -> Dict[str, Any]:
             logger.error("No summary_id found in initial_ids - dummy summary was not created properly")
             raise ValueError("Missing summary_id for updating dummy summary")
 
-        # Generate the final summary content with enhanced attendee matching
-        logger.debug("Generating final summary content with participant matching")
+        # Generate the final summary content with enhanced attendee matching and length controls
+        logger.debug("Generating final summary content with participant matching and improved length control")
         final_summary = await generate_summary(
             transcription, 
             attendees, 
@@ -391,9 +502,13 @@ async def summary_generation_node(state: Dict[str, Any]) -> Dict[str, Any]:
             meeting_date
         )
         
-        # Log attendee matching results
+        # Log attendee matching results and summary metrics
         matched_count = sum(1 for att in final_summary.attendees if isinstance(att, dict) and att.get("id"))
+        summary_word_count = len(final_summary.summary.split())
+        title_word_count = len(final_summary.title.split())
+        
         logger.info(f"Successfully matched {matched_count}/{len(final_summary.attendees)} attendees to participant data")
+        logger.info(f"Generated summary: {title_word_count} words in title, {summary_word_count} words in human-friendly summary")
         
         # Update the existing dummy summary with the final content
         logger.debug(f"Updating existing summary {summary_id} with final content")

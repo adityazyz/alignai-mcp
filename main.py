@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from langgraph.graph import StateGraph, END
@@ -9,10 +9,11 @@ from agents.data_fetching import data_fetching_node
 from agents.transcription import transcription_node
 from agents.analysis import analysis_node
 from agents.summary_generation import summary_generation_node
-from agents.task_identification import task_identification_node
-from agents.content_generation import content_generation_node
+# from agents.task_identification import task_identification_node
+# from agents.content_generation import content_generation_node
 from agents.storage_response import storage_response_node
 from agents.parallel_coordinator import parallel_coordinator_node
+from middleware import verify_auth_token
 import asyncio
 import json
 from sse_starlette.sse import EventSourceResponse
@@ -24,9 +25,13 @@ app = FastAPI()
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+# Add middleware to verify auth token
+app.middleware("http")(verify_auth_token)
+
 class ProcessRequest(BaseModel):
     meeting_id: str
-    auth_token: str
+    # auth_token is now verified by middleware, but kept in model for compatibility
+    auth_token: Optional[str] = None
 
 class State(TypedDict):
     meetingId: str
@@ -68,11 +73,11 @@ def create_workflow():
     # Set entry point
     workflow.set_entry_point("data_fetching")
     
-    # FIXED: Create flow that includes summary_generation_node after parallel_coordinator
+    # Create flow that includes summary_generation_node after parallel_coordinator
     workflow.add_edge("data_fetching", "transcription_processing")
     workflow.add_edge("transcription_processing", "analysis")
     workflow.add_edge("analysis", "parallel_coordinator")
-    workflow.add_edge("parallel_coordinator", "summary_generation")  # Summary updates dummy after parallel processing
+    workflow.add_edge("parallel_coordinator", "summary_generation")
     workflow.add_edge("summary_generation", "storage_response")
     workflow.add_edge("storage_response", END)
     
@@ -174,10 +179,12 @@ async def sse_generator(meeting_id: str, state: Dict[str, Any]):
         yield {"event": "error", "data": json.dumps(error_response)}
 
 @app.post("/process")
-async def process_meeting(request: ProcessRequest):
+async def process_meeting(request: ProcessRequest, fastapi_request: Request):
     try:
+        # Get auth_token from request.state (set by middleware)
+        auth_token = fastapi_request.state.auth_token
         logger.debug(f"Starting pipeline for meeting {request.meeting_id}")
-        return EventSourceResponse(sse_generator(request.meeting_id, {"auth_token": request.auth_token}))
+        return EventSourceResponse(sse_generator(request.meeting_id, {"auth_token": auth_token}))
     except Exception as e:
         logger.error(f"Error initializing pipeline for meeting {request.meeting_id}: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to start pipeline: {str(e)}")

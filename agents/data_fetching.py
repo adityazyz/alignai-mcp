@@ -14,7 +14,7 @@ load_dotenv()
 llm = ChatNVIDIA(model=os.getenv("MODEL_NAME", "meta/llama-3.1-70b-instruct"), temperature=0)
 logger = logging.getLogger(__name__)
 
-def extract_users(data: dict) -> list:
+def extract_department_users(data: dict) -> list:
     """
     Extracts the 'user' objects from all members in the given data.
 
@@ -61,11 +61,15 @@ async def data_fetching_node(state: Dict[str, Any]) -> Dict[str, Any]:
         participants = []
         if meeting_data.get("department_id"):
             participants = await fetch_department_members(meeting_data["department_id"])
+            participants = extract_department_users(participants)
         else:
             participants = await fetch_organization_members(meeting_data["organization_id"])
+            participants = participants.get("members", []);
 
-        participants = extract_users(participants)
+        print("participants fetched successfully",participants);
 
+
+        
 
         # Fallback for attendees if bot list is empty, mapping names to participants
         if not attendees:

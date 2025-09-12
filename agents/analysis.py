@@ -19,12 +19,13 @@ class ContentDetails(BaseModel):
     type: str
     recipient: str
     subject: Optional[str] = None
+    hints: Optional[str] = None  # Added hints field
 
 class AnalysisOutput(BaseModel):
     generate_summary: bool = True
     tasks_detected: bool
     content_detected: bool
-    content_details: ContentDetails
+    content_details: Optional[ContentDetails] = None
 
 async def analysis_node(state: Dict[str, Any]) -> Dict[str, Any]:
     try:
@@ -53,19 +54,32 @@ async def analysis_node(state: Dict[str, Any]) -> Dict[str, Any]:
                         return participant.get("email", participant.get("id", ""))
             return ""
 
-        # Define prompt for analysis
+        # Enhanced prompt for better content detection and hint generation
         prompt = ChatPromptTemplate.from_messages([
-            ("system", """Analyze the meeting transcription to determine if a summary, tasks, or content (e.g., email, document) should be generated. Identify tasks (e.g., 'John, please follow up on X') and content needs (e.g., 'Draft an email to client about Y'). Match attendee names to participant emails/IDs for assignees/recipients. Return a JSON object with:
+            ("system", """Analyze the meeting transcription to determine if a summary, tasks, or content (e.g., email, document) should be generated. 
+
+For CONTENT DETECTION, look for:
+1. Direct mentions: "draft an email", "send a message", "create a document", "write a report"
+2. Implied needs: "follow up with client", "update the team", "inform stakeholders", "share the results"
+3. Communication requirements: "let them know", "reach out to", "notify", "update", "inform"
+4. Documentation needs: obvious need for written follow-up, documentation, or formal communication
+
+For content_details, provide:
+- type: "email" or "document" 
+- recipient: try to identify from context (name/email), use "enteryouremail@gmail.com" as last fallback
+- subject: clear subject based on content purpose
+- hints: detailed description of WHY this content needs to be created, WHAT it should contain, WHO it's for, and any SPECIFIC CONTEXT from the meeting
+
+Match attendee names to participant emails/IDs for accurate recipients. Return JSON with:
 - generate_summary: boolean (always true)
-- tasks_detected: boolean (true if tasks like 'follow up' or 'assign' are detected for a particular member of the department or organization, whether in the meeting or not)
-- content_detected: boolean (true if content like 'draft/create email', "draft/create message" or 'create document' is said to a particular participant of the meeting is detected)
-- content_details: object with type (string, 'email' or 'document'), recipient (string, email or empty), subject (string, optional for email)
-Ensure the response is valid JSON."""),
+- tasks_detected: boolean (true if tasks are detected)
+- content_detected: boolean (true if any content creation is needed)
+- content_details: object with type, recipient, subject, and hints (null if no content needed)"""),
             ("user", "Transcription: {transcription}\nAttendees: {attendees}\nParticipants: {participants}")
         ])
         
         chain = prompt | llm.with_structured_output(AnalysisOutput)
-        logger.debug("Invoking LLM chain")
+        logger.debug("Invoking LLM chain for enhanced analysis")
         analysis: AnalysisOutput = await chain.ainvoke({
             "transcription": transcription,
             "attendees": attendees,
@@ -73,25 +87,46 @@ Ensure the response is valid JSON."""),
         })
         logger.debug(f"Parsed analysis: {analysis.model_dump()}")
 
-        # Fallback for tasks_detected and content_detected
-        if not analysis.tasks_detected:
-            analysis.tasks_detected = "follow up" in transcription.lower() or "assign" in transcription.lower() or "action" in transcription.lower()
+        # Enhanced fallback logic for content detection
         if not analysis.content_detected:
-            analysis.content_detected = "draft email" in transcription.lower() or "create document" in transcription.lower() or "send email" in transcription.lower()
-            if analysis.content_detected:
-                content_type = "email" if "email" in transcription.lower() else "document"
-                recipient = next((p.get("email", "") for p in participants if p.get("email")), "")
-                subject = "Meeting Follow-Up" if content_type == "email" else ""
-                analysis.content_details = ContentDetails(type=content_type, recipient=recipient, subject=subject)
+            content_keywords = [
+                "draft email", "send email", "create document", "write report",
+                "follow up", "reach out", "notify", "inform", "update them",
+                "let them know", "share with", "communicate", "send message"
+            ]
+            
+            transcription_lower = transcription.lower()
+            for keyword in content_keywords:
+                if keyword in transcription_lower:
+                    analysis.content_detected = True
+                    
+                    # Try to extract recipient from context
+                    recipient_email = "enteryouremail@gmail.com"  # Default fallback
+                    
+                    # Try to find email from participants first
+                    for participant in participants:
+                        if isinstance(participant, dict) and participant.get("email"):
+                            recipient_email = participant["email"]
+                            break
+                    
+                    # Create content details with hints
+                    content_type = "email" if any(word in keyword for word in ["email", "message", "notify", "inform"]) else "document"
+                    subject = "Meeting Follow-Up" if content_type == "email" else "Meeting Documentation"
+                    hints = f"Content needed based on '{keyword}' mentioned in transcription. Extract relevant context and create appropriate {content_type}."
+                    
+                    analysis.content_details = ContentDetails(
+                        type=content_type,
+                        recipient=recipient_email,
+                        subject=subject,
+                        hints=hints
+                    )
+                    break
 
-        # Set default content_details if not set
-        if not analysis.content_details and analysis.content_detected:
-            recipient = next((p.get("email", "") for p in participants if p.get("email")), "")
-            analysis.content_details = ContentDetails(
-                type="email",
-                recipient=recipient,
-                subject="Meeting Follow-Up"
-            )
+        # Fallback for tasks_detected
+        if not analysis.tasks_detected:
+            analysis.tasks_detected = any(keyword in transcription.lower() for keyword in [
+                "follow up", "assign", "action", "complete", "finish", "deliver", "implement"
+            ])
 
         # CREATE DUMMY SUMMARY IMMEDIATELY AFTER ANALYSIS
         dummy_summary_id = ""
@@ -109,8 +144,8 @@ Ensure the response is valid JSON."""),
                 )
                 
                 dummy_summary_id = await create_meeting_summary(dummy_summary)
-                # // set id to state for storage node to pick up
-                state["initial_ids"]["summary_id"] = dummy_summary_id;
+                # set id to state for storage node to pick up
+                state["initial_ids"]["summary_id"] = dummy_summary_id
                 logger.info(f"Created dummy summary with ID: {dummy_summary_id}")
                 
                 if not dummy_summary_id:
@@ -120,10 +155,9 @@ Ensure the response is valid JSON."""),
                 
             except Exception as dummy_error:
                 logger.error(f"Failed to create dummy summary: {dummy_error}")
-                # Continue without failing the entire analysis - parallel coordinator will create new one
 
         # Update state with analysis results AND dummy summary ID
-        state["messages"] = state.get("messages", []) + ["Analysis completed"]
+        state["messages"] = state.get("messages", []) + ["Enhanced analysis completed"]
         logger.info("Analysis node completed successfully")
         
         return {
