@@ -115,6 +115,7 @@ async def parallel_coordinator_node(state: Dict[str, Any]) -> Dict[str, Any]:
         organization_id = state.get("organizationId", "") 
         department_id = state.get("departmentId")
         meeting_date = state.get("meeting_data", {}).get("meeting_date", datetime.utcnow().isoformat())
+        meeting_id = state.get("meetingId", "")  # Get meetingId from state
         
         # Analysis results
         generate_summary_flag = state.get("generate_summary", True)
@@ -191,7 +192,7 @@ async def parallel_coordinator_node(state: Dict[str, Any]) -> Dict[str, Any]:
                     better_recipient = get_default_participant_id(participants)
                     content.recipientEmail = better_recipient
         
-        # Step 3: Create database records ONLY for tasks and content
+        # Step 3: Create database records ONLY for tasks and content (including meetingId)
         # Summary is handled by summary_generation_node updating the existing dummy
         creation_tasks = []
         creation_names = []
@@ -207,14 +208,16 @@ async def parallel_coordinator_node(state: Dict[str, Any]) -> Dict[str, Any]:
                 for j, subtask in enumerate(task.subtasks):
                     logger.debug(f"  Subtask {j+1}: {subtask.content}")
             
-            creation_tasks.append(create_tasks(tasks_to_create))
+            # Pass meetingId when creating tasks
+            creation_tasks.append(create_tasks(tasks_to_create, meeting_id))
             creation_names.append("tasks")
         
         # Create content records - ensure we always pass a list
         if final_content and content_detected:
             # Always pass as list even for single content
             content_to_create = final_content if isinstance(final_content, list) else [final_content]
-            creation_tasks.append(create_generated_content(content_to_create))
+            # Pass meetingId when creating content
+            creation_tasks.append(create_generated_content(content_to_create, meeting_id))
             creation_names.append("content")
         
         # Execute database operations in parallel (only tasks and content)
@@ -232,11 +235,11 @@ async def parallel_coordinator_node(state: Dict[str, Any]) -> Dict[str, Any]:
                 else:
                     if creation_name == "tasks":
                         initial_ids["task_ids"] = result if isinstance(result, list) else [result] if result else []
-                        logger.info(f"Successfully created {len(initial_ids['task_ids'])} tasks with subtasks in database")
+                        logger.info(f"Successfully created {len(initial_ids['task_ids'])} tasks with subtasks in database for meeting {meeting_id}")
                     elif creation_name == "content":
                         # Now expect a list of IDs from bulk creation
                         initial_ids["content_ids"] = result if isinstance(result, list) else [result] if result else []
-                        logger.info(f"Successfully created {len(initial_ids['content_ids'])} content items in database")
+                        logger.info(f"Successfully created {len(initial_ids['content_ids'])} content items in database for meeting {meeting_id}")
         
         logger.debug(f"Enhanced parallel coordinator completed. Task IDs: {initial_ids.get('task_ids', [])}, Content IDs: {initial_ids.get('content_ids', [])}")
         logger.debug(f"Summary will be handled by summary_generation_node using existing ID: {initial_ids.get('summary_id', 'NOT_FOUND')}")
@@ -255,7 +258,7 @@ async def parallel_coordinator_node(state: Dict[str, Any]) -> Dict[str, Any]:
             avg_subtasks = total_subtasks / len(final_tasks) if final_tasks else 0
             updated_state["messages"][-1] += f" ({len(final_tasks)} tasks, {total_subtasks} subtasks, avg {avg_subtasks:.1f} subtasks/task)"
         
-        logger.info("Enhanced parallel processing completed successfully with comprehensive subtask support")
+        logger.info(f"Enhanced parallel processing completed successfully with comprehensive subtask support for meeting {meeting_id}")
         return updated_state
         
     except Exception as e:

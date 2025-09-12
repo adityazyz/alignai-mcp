@@ -36,6 +36,7 @@ async def analysis_node(state: Dict[str, Any]) -> Dict[str, Any]:
         organization_id = state.get("organizationId", "")
         department_id = state.get("departmentId")
         meeting_date = state.get("meeting_data", {}).get("meeting_date", datetime.utcnow().isoformat())
+        meeting_id = state.get("meetingId", "")  # Get meetingId from state
         
         logger.debug(f"State: {state}")
 
@@ -143,10 +144,11 @@ Match attendee names to participant emails/IDs for accurate recipients. Return J
                     actionItems=[]
                 )
                 
-                dummy_summary_id = await create_meeting_summary(dummy_summary)
+                # Pass meetingId when creating dummy summary
+                dummy_summary_id = await create_meeting_summary(dummy_summary, meeting_id)
                 # set id to state for storage node to pick up
                 state["initial_ids"]["summary_id"] = dummy_summary_id
-                logger.info(f"Created dummy summary with ID: {dummy_summary_id}")
+                logger.info(f"Created dummy summary with ID: {dummy_summary_id} for meeting: {meeting_id}")
                 
                 if not dummy_summary_id:
                     logger.error("Failed to create dummy summary - got empty ID")

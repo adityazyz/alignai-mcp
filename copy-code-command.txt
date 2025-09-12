@@ -1,0 +1,10 @@
+find . -type f \
+  ! -name "all_code.txt" \
+  ! -name "dummy2.py" \
+  ! -name "dummy.py" \
+  -not -path "*/__pycache__/*" \
+  -not -path "*/venv/*" \
+  -not -path "*/.env/*" \
+  -not -path "*/.git/*" \
+  -not -path "*/models/*" \
+  -exec sh -c 'echo "# $1"; cat "$1"; echo "\n"' _ {} \; > all_code.txt
