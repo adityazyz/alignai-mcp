@@ -49,8 +49,10 @@ async def data_fetching_node(state: Dict[str, Any]) -> Dict[str, Any]:
         # Fetch attendees from RecallAI bot
         bot_data = await fetch_recallai_bot_data(meeting_data.get("bot_id", ""))
         attendees = bot_data.get("participants", [])
+        attendees_events = bot_data.get("participants_events", [])
         audio_url = bot_data.get("audio_mixed")
         video_url = bot_data.get("video_mixed")
+
 
         # state["status"] = "failure"
         state["audioUrl"] = bot_data.get("audio_mixed")
@@ -80,10 +82,11 @@ async def data_fetching_node(state: Dict[str, Any]) -> Dict[str, Any]:
 
         state["messages"] = state.get("messages", []) + ["Data fetched successfully"]
         return {
-            **state,
+            **state, 
             "organizationId": meeting_data["organization_id"],
             "departmentId": meeting_data.get("department_id"),
             "attendees": attendees,
+            "attendees_events": attendees_events,
             "participants": participants,
             "audioUrl": audio_url,
             "videoUrl": video_url,

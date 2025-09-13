@@ -9,10 +9,9 @@ from agents.data_fetching import data_fetching_node
 from agents.transcription import transcription_node
 from agents.analysis import analysis_node
 from agents.summary_generation import summary_generation_node
-# from agents.task_identification import task_identification_node
-# from agents.content_generation import content_generation_node
 from agents.storage_response import storage_response_node
 from agents.parallel_coordinator import parallel_coordinator_node
+from agents.performance_record import performance_records_node
 from middleware import verify_auth_token
 import asyncio
 import json
@@ -41,6 +40,7 @@ class State(TypedDict):
     meeting_data: Optional[Dict[str, Any]]
     participants: List[Dict[str, str]]
     attendees: List[Dict[str, str]]
+    attendees_events : Optional[List[Dict[str, Any]]]
     audioUrl: Optional[str]
     videoUrl: Optional[str]
     transcription: Optional[str]
@@ -68,6 +68,7 @@ def create_workflow():
     workflow.add_node("analysis", analysis_node)
     workflow.add_node("parallel_coordinator", parallel_coordinator_node)
     workflow.add_node("summary_generation", summary_generation_node)
+    workflow.add_node("performance_records", performance_records_node)
     workflow.add_node("storage_response", storage_response_node)
     
     # Set entry point
@@ -78,7 +79,8 @@ def create_workflow():
     workflow.add_edge("transcription_processing", "analysis")
     workflow.add_edge("analysis", "parallel_coordinator")
     workflow.add_edge("parallel_coordinator", "summary_generation")
-    workflow.add_edge("summary_generation", "storage_response")
+    workflow.add_edge("summary_generation", "performance_records")
+    workflow.add_edge("performance_records", "storage_response")
     workflow.add_edge("storage_response", END)
     
     return workflow.compile()
