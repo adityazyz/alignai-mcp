@@ -117,12 +117,13 @@ async def fetch_organization_members(organization_id: str) -> List[Dict]:
                 }
             ]
 
-async def create_meeting_summary(initial_data: Union[Dict, MeetingSummary]) -> str:
+async def create_meeting_summary(initial_data: Union[Dict, MeetingSummary], meeting_id: str = None) -> str:
     """
     Create a meeting summary by sending a POST request to the Node.js backend.
 
     Args:
         initial_data: Dictionary or MeetingSummary Pydantic model with summary creation fields.
+        meeting_id: The ID of the meeting this summary belongs to.
 
     Returns:
         str: The ID of the created summary, or empty string if failed.
@@ -142,6 +143,10 @@ async def create_meeting_summary(initial_data: Union[Dict, MeetingSummary]) -> s
                 "attendees": data.get("attendees", []),
                 "actionItems": data.get("actionItems", [])
             }
+            
+            # Add meetingId if provided
+            if meeting_id:
+                payload["meetingId"] = meeting_id
             
             logger.debug(f"Sending meeting summary to {NODE_API_URL}/mcp/summary/create: {payload}")
             response = await client.post(
@@ -203,12 +208,13 @@ async def update_meeting_summary(summary_id: str, data: Union[Dict, MeetingSumma
             logger.error(f"Failed to update meeting summary {summary_id}: {str(e)}. Response: {e.response.text if hasattr(e, 'response') else 'No response'}")
             return False
 
-async def create_tasks(initial_tasks: List[Union[Dict, Task]]) -> List[str]:
+async def create_tasks(initial_tasks: List[Union[Dict, Task]], meeting_id: str = None) -> List[str]:
     """
     Create tasks by sending a POST request to the Node.js backend.
 
     Args:
         initial_tasks: List of dictionaries or Task Pydantic models with task creation fields.
+        meeting_id: The ID of the meeting these tasks belong to.
 
     Returns:
         List[str]: List of created task IDs, or empty list if failed.
@@ -247,6 +253,10 @@ async def create_tasks(initial_tasks: List[Union[Dict, Task]]) -> List[str]:
                     "deadline": task_dict.get("deadline"),
                     "subtasks": task_dict.get("subtasks", [])
                 }
+                
+                # Add meetingId if provided
+                if meeting_id:
+                    task_payload["meetingId"] = meeting_id
                 
                 # CRITICAL FIX: Make sure assignedToId is not "ai" if we have valid participants
                 if task_payload["assignedToId"] == "ai":
@@ -293,12 +303,13 @@ async def create_tasks(initial_tasks: List[Union[Dict, Task]]) -> List[str]:
             logger.error(f"Unexpected error creating tasks: {str(e)}")
             return []
 
-async def create_generated_content(initial_content_list: List[Union[Dict, GeneratedContent]]) -> List[str]:
+async def create_generated_content(initial_content_list: List[Union[Dict, GeneratedContent]], meeting_id: str = None) -> List[str]:
     """
     Create multiple generated content items by sending a POST request to the Node.js backend.
 
     Args:
         initial_content_list: List of dictionaries or GeneratedContent Pydantic models with content creation fields.
+        meeting_id: The ID of the meeting this content belongs to.
 
     Returns:
         List[str]: List of created content IDs, or empty list if failed.
@@ -333,6 +344,10 @@ async def create_generated_content(initial_content_list: List[Union[Dict, Genera
                     "recipientEmail": content_dict.get("recipientEmail"),
                     "metadata": content_dict.get("metadata")
                 }
+                
+                # Add meetingId if provided
+                if meeting_id:
+                    content_payload["meetingId"] = meeting_id
                 
                 # Remove None values except for departmentId which can be None
                 cleaned_payload = {}
@@ -374,7 +389,57 @@ async def create_generated_content(initial_content_list: List[Union[Dict, Genera
         except Exception as e:
             logger.error(f"Unexpected error creating generated content: {str(e)}")
             return []
+        
+async def bulk_create_performance_records(records_data: List[Dict]) -> List[str]:
+    """
+    Create multiple performance records by sending a POST request to the Node.js backend.
 
+    Args:
+        records_data: List of dictionaries with performance record creation fields.
+
+    Returns:
+        List[str]: List of created record IDs, or empty list if failed.
+    """
+    # Return empty list if no records to create
+    if not records_data:
+        logger.debug("No performance records to create, returning empty list")
+        return []
+
+    async with httpx.AsyncClient() as client:
+        try:
+            # Prepare payload
+            payload = {"records": records_data}
+            
+            logger.debug(f"Creating performance records with payload: {payload}")
+            response = await client.post(
+                f"{NODE_API_URL}/mcp/performance/bulk-create",
+                json=payload,
+                headers={"Backend-Auth-Token": BACKEND_AUTH_TOKEN}
+            )
+            
+            # Log the full response for debugging
+            logger.debug(f"Performance record creation response status: {response.status_code}")
+            if response.status_code != 201:
+                logger.error(f"Performance record creation failed with status {response.status_code}: {response.text}")
+                return []
+                
+            response.raise_for_status()
+            
+            response_data = response.json()
+            # Extract record IDs from the response
+            created_records = response_data.get("records", [])
+            record_ids = [record.get("id") for record in created_records if record.get("id")]
+            
+            logger.debug(f"Created performance records with IDs: {record_ids}")
+            return record_ids
+            
+        except httpx.HTTPError as e:
+            logger.error(f"Failed to create performance records: {str(e)}. Response: {e.response.text if hasattr(e, 'response') else 'No response'}")
+            return []
+        except Exception as e:
+            logger.error(f"Unexpected error creating performance records: {str(e)}")
+            return []
+        
 
 # async def update_tasks(task_ids: List[str], tasks: List[Union[Dict, Task]]) -> bool:
 #     """

@@ -1,0 +1,1164 @@
+find . -type f \
+  ! -name "all_code.txt" \
+  ! -name "dummy2.py" \
+  ! -name "dummy.py" \
+  ! -name "copy-code-command.txt" \
+  -not -path "*/__pycache__/*" \
+  -not -path "*/venv/*" \
+  -not -path "*/.env/*" \
+  -not -path "*/.git/*" \
+  -not -path "*/models/*" \
+  -exec sh -c 'echo "# $1"; cat "$1"; echo "\n"' _ {} \; > all_code.txt
+
+
+
+// Positive scoring types (in Meetings decided by ai, to be evaluated based on meeting transcription and atendees events list)
+1 "attendance" - (+1) points for attending meetings
+2 "active_participation" - (+2) points for active participation in meetings
+3 "collaboration" - (+2) points for collaborating on tasks or meetings
+4 "initiative" - (+2) points for taking initiative in tasks or meetings
+5 "feedback" - (+2) points for providing constructive feedback in meetings
+6 "innovation" - (+2) points for suggesting innovative ideas in meetings or tasks
+7 "leadership" - (+2) points for leading meetings or tasks
+8 "teamwork" - (+2) points for effective teamwork in tasks or meetings
+9 "communication" -(+1) points for clear communication in tasks or meetings
+10 "problem_solving" -(+2) points for effective problem-solving in tasks or meetings
+11 "creativity" -(+2) points for creative contributions in tasks or meetings
+12 "adaptability" -(+2) points for adapting to changes in tasks or meetings
+13 "professionalism" -(+2) points for maintaining professionalism in tasks or meetings
+14 "customer_focus" -(+2) points for focusing on customer needs in tasks or meetings
+15 "attention_to_detail" -(+2) points for attention to detail in tasks or meetings
+16 "goal_achievement" -(+2) points for achieving goals in tasks or meetings
+
+// Negative scoring types (in Meetings decided by ai, ( to be evaluated based on transcription and atendees events list) )
+1 "poor_communication" - (-1) points deducted for poor communication in tasks or meetings
+2 "late_joining" - (-1) points deducted for joining meetings late
+3 "early_leaving" - (-1) points deducted for leaving meetings early
+4 "disengagement" - (-2) points deducted for lack of engagement in tasks or meetings
+5 "conflict" -(-2) points deducted for conflicts in tasks or meetings
+6 "unprofessionalism" -(-2) points deducted for unprofessional behavior in tasks or meetings  
+7 "lack_of_participation" - (-2)  points deducted for not participating for tasks and dodging them in meetings
+
+
+formatted participants list : 
+[
+    {
+        "id": 100,
+        "name": "Wayne Haber",
+        "is_host": True,
+        "platform": "unknown",
+        "extra_data": {
+            "google_meet": {
+                "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+            }
+        }
+    },
+    {
+        "id": 200,
+        "name": "Thomas Woodham",
+        "is_host": False,
+        "platform": "unknown",
+        "extra_data": {
+            "google_meet": {
+                "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+            }
+        }
+    },
+    {
+        "id": 300,
+        "name": "Jay Swain",
+        "is_host": False,
+        "platform": "unknown",
+        "extra_data": {
+            "google_meet": {
+                "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+            }
+        }
+    },
+    {
+        "id": 400,
+        "name": "Amar Patel",
+        "is_host": False,
+        "platform": "unknown",
+        "extra_data": {
+            "google_meet": {
+                "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+            }
+        }
+    },
+    {
+        "id": 500,
+        "name": "Neil McCorrison",
+        "is_host": False,
+        "platform": "unknown",
+        "extra_data": {
+            "google_meet": {
+                "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+            }
+        }
+    },
+    {
+        "id": 600,
+        "name": "Fernando Diaz",
+        "is_host": False,
+        "platform": "unknown",
+        "extra_data": {
+            "google_meet": {
+                "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+            }
+        }
+    },
+    {
+        "id": 700,
+        "name": "Seth Berger",
+        "is_host": False,
+        "platform": "unknown",
+        "extra_data": {
+            "google_meet": {
+                "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+            }
+        }
+    },
+    {
+        "id": 800,
+        "name": "Phil Calder",
+        "is_host": False,
+        "platform": "unknown",
+        "extra_data": {
+            "google_meet": {
+                "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+            }
+        }
+    },
+    {
+        "id": 900,
+        "name": "Mon Ray",
+        "is_host": False,
+        "platform": "unknown",
+        "extra_data": {
+            "google_meet": {
+                "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+            }
+        }
+    },
+    {
+        "id": 1000,
+        "name": "Alan",
+        "is_host": False,
+        "platform": "unknown",
+        "extra_data": {
+            "google_meet": {
+                "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+            }
+        }
+    }
+]
+
+processed participants list :
+[{'name': 'Wayne Haber', 'is_host': True, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'name': 'Thomas Woodham', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'name': 'Jay Swain', 'is_host': False, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'name': 'Amar Patel', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'name': 'Neil McCorrison', 'is_host': False, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'name': 'Fernando Diaz', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'name': 'Seth Berger', 'is_host': False, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'name': 'Phil Calder', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'name': 'Mon Ray', 'is_host': False, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'name': 'Alan', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}]
+
+participants events list :
+[
+    {
+        "id": "1",
+        "action": "join",
+        "timestamp": {
+            "absolute": "2025-09-14T08:00:00.000000Z",
+            "relative": 0
+        },
+        "participant": {
+            "id": 100,
+            "name": "Wayne Haber",
+            "is_host": True,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "2",
+        "action": "speech_on",
+        "timestamp": {
+            "absolute": "2025-09-14T08:00:00.500000Z",
+            "relative": 0.5
+        },
+        "participant": {
+            "id": 100,
+            "name": "Wayne Haber",
+            "is_host": True,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "3",
+        "action": "join",
+        "timestamp": {
+            "absolute": "2025-09-14T08:00:30.000000Z",
+            "relative": 30.0
+        },
+        "participant": {
+            "id": 1000,
+            "name": "Alan",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "4",
+        "action": "join",
+        "timestamp": {
+            "absolute": "2025-09-14T08:01:00.000000Z",
+            "relative": 60.0
+        },
+        "participant": {
+            "id": 800,
+            "name": "Phil Calder",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "5",
+        "action": "join",
+        "timestamp": {
+            "absolute": "2025-09-14T08:02:00.000000Z",
+            "relative": 120.0
+        },
+        "participant": {
+            "id": 900,
+            "name": "Mon Ray",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "6",
+        "action": "speech_off",
+        "timestamp": {
+            "absolute": "2025-09-14T08:04:30.000000Z",
+            "relative": 270.0
+        },
+        "participant": {
+            "id": 100,
+            "name": "Wayne Haber",
+            "is_host": True,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "7",
+        "action": "speech_on",
+        "timestamp": {
+            "absolute": "2025-09-14T08:04:30.100000Z",
+            "relative": 270.1
+        },
+        "participant": {
+            "id": 900,
+            "name": "Mon Ray",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "8",
+        "action": "speech_off",
+        "timestamp": {
+            "absolute": "2025-09-14T08:05:00.000000Z",
+            "relative": 300.0
+        },
+        "participant": {
+            "id": 900,
+            "name": "Mon Ray",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "9",
+        "action": "speech_on",
+        "timestamp": {
+            "absolute": "2025-09-14T08:05:00.100000Z",
+            "relative": 300.1
+        },
+        "participant": {
+            "id": 100,
+            "name": "Wayne Haber",
+            "is_host": True,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "10",
+        "action": "join",
+        "timestamp": {
+            "absolute": "2025-09-14T08:06:00.000000Z",
+            "relative": 360.0
+        },
+        "participant": {
+            "id": 500,
+            "name": "Neil McCorrison",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+            }
+        }
+        },
+        "data": None
+    },
+    {
+        "id": "11",
+        "action": "speech_off",
+        "timestamp": {
+            "absolute": "2025-09-14T08:08:00.000000Z",
+            "relative": 480.0
+        },
+        "participant": {
+            "id": 100,
+            "name": "Wayne Haber",
+            "is_host": True,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "12",
+        "action": "speech_on",
+        "timestamp": {
+            "absolute": "2025-09-14T08:08:00.100000Z",
+            "relative": 480.1
+        },
+        "participant": {
+            "id": 500,
+            "name": "Neil McCorrison",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "13",
+        "action": "speech_off",
+        "timestamp": {
+            "absolute": "2025-09-14T08:09:30.000000Z",
+            "relative": 570.0
+        },
+        "participant": {
+            "id": 500,
+            "name": "Neil McCorrison",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "14",
+        "action": "speech_on",
+        "timestamp": {
+            "absolute": "2025-09-14T08:09:30.100000Z",
+            "relative": 570.1
+        },
+        "participant": {
+            "id": 100,
+            "name": "Wayne Haber",
+            "is_host": True,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "15",
+        "action": "speech_off",
+        "timestamp": {
+            "absolute": "2025-09-14T08:10:30.000000Z",
+            "relative": 630.0
+        },
+        "participant": {
+            "id": 100,
+            "name": "Wayne Haber",
+            "is_host": True,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "16",
+        "action": "speech_on",
+        "timestamp": {
+            "absolute": "2025-09-14T08:10:30.100000Z",
+            "relative": 630.1
+        },
+        "participant": {
+            "id": 800,
+            "name": "Phil Calder",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "17",
+        "action": "speech_off",
+        "timestamp": {
+            "absolute": "2025-09-14T08:12:30.000000Z",
+            "relative": 750.0
+        },
+        "participant": {
+            "id": 800,
+            "name": "Phil Calder",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "18",
+        "action": "speech_on",
+        "timestamp": {
+            "absolute": "2025-09-14T08:12:30.100000Z",
+            "relative": 750.1
+        },
+        "participant": {
+            "id": 200,
+            "name": "Thomas Woodham",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "19",
+        "action": "join",
+        "timestamp": {
+            "absolute": "2025-09-14T08:13:00.000000Z",
+            "relative": 780.0
+        },
+        "participant": {
+            "id": 200,
+            "name": "Thomas Woodham",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "20",
+        "action": "speech_off",
+        "timestamp": {
+            "absolute": "2025-09-14T08:15:00.000000Z",
+            "relative": 900.0
+        },
+        "participant": {
+            "id": 200,
+            "name": "Thomas Woodham",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "21",
+        "action": "speech_on",
+        "timestamp": {
+            "absolute": "2025-09-14T08:15:00.100000Z",
+            "relative": 900.1
+        },
+        "participant": {
+            "id": 100,
+            "name": "Wayne Haber",
+            "is_host": True,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "22",
+        "action": "join",
+        "timestamp": {
+            "absolute": "2025-09-14T08:18:00.000000Z",
+            "relative": 1080.0
+        },
+        "participant": {
+            "id": 300,
+            "name": "Jay Swain",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "23",
+        "action": "speech_off",
+        "timestamp": {
+            "absolute": "2025-09-14T08:20:00.000000Z",
+            "relative": 1200.0
+        },
+        "participant": {
+            "id": 100,
+            "name": "Wayne Haber",
+            "is_host": True,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "24",
+        "action": "speech_on",
+        "timestamp": {
+            "absolute": "2025-09-14T08:20:00.100000Z",
+            "relative": 1200.1
+        },
+        "participant": {
+            "id": 300,
+            "name": "Jay Swain",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "25",
+        "action": "speech_off",
+        "timestamp": {
+            "absolute": "2025-09-14T08:21:30.000000Z",
+            "relative": 1290.0
+        },
+        "participant": {
+            "id": 300,
+            "name": "Jay Swain",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "26",
+        "action": "speech_on",
+        "timestamp": {
+            "absolute": "2025-09-14T08:21:30.100000Z",
+            "relative": 1290.1
+        },
+        "participant": {
+            "id": 500,
+            "name": "Neil McCorrison",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "27",
+        "action": "join",
+        "timestamp": {
+            "absolute": "2025-09-14T08:22:00.000000Z",
+            "relative": 1320.0
+        },
+        "participant": {
+            "id": 400,
+            "name": "Amar Patel",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "28",
+        "action": "speech_off",
+        "timestamp": {
+            "absolute": "2025-09-14T08:23:00.000000Z",
+            "relative": 1380.0
+        },
+        "participant": {
+            "id": 500,
+            "name": "Neil McCorrison",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "29",
+        "action": "speech_on",
+        "timestamp": {
+            "absolute": "2025-09-14T08:23:00.100000Z",
+            "relative": 1380.1
+        },
+        "participant": {
+            "id": 400,
+            "name": "Amar Patel",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "30",
+        "action": "speech_off",
+        "timestamp": {
+            "absolute": "2025-09-14T08:24:30.000000Z",
+            "relative": 1470.0
+        },
+        "participant": {
+            "id": 400,
+            "name": "Amar Patel",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "31",
+        "action": "speech_on",
+        "timestamp": {
+            "absolute": "2025-09-14T08:24:30.100000Z",
+            "relative": 1470.1
+        },
+        "participant": {
+            "id": 200,
+            "name": "Thomas Woodham",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "32",
+        "action": "join",
+        "timestamp": {
+            "absolute": "2025-09-14T08:35:00.000000Z",
+            "relative": 2100.0
+        },
+        "participant": {
+            "id": 600,
+            "name": "Fernando Diaz",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "33",
+        "action": "speech_off",
+        "timestamp": {
+            "absolute": "2025-09-14T08:35:30.000000Z",
+            "relative": 2130.0
+        },
+        "participant": {
+            "id": 200,
+            "name": "Thomas Woodham",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "34",
+        "action": "speech_on",
+        "timestamp": {
+            "absolute": "2025-09-14T08:35:30.100000Z",
+            "relative": 2130.1
+        },
+        "participant": {
+            "id": 600,
+            "name": "Fernando Diaz",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "35",
+        "action": "join",
+        "timestamp": {
+            "absolute": "2025-09-14T08:40:00.000000Z",
+            "relative": 2400.0
+        },
+        "participant": {
+            "id": 700,
+            "name": "Seth Berger",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "36",
+        "action": "speech_off",
+        "timestamp": {
+            "absolute": "2025-09-14T08:42:00.000000Z",
+            "relative": 2520.0
+        },
+        "participant": {
+            "id": 600,
+            "name": "Fernando Diaz",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "37",
+        "action": "speech_on",
+        "timestamp": {
+            "absolute": "2025-09-14T08:42:00.100000Z",
+            "relative": 2520.1
+        },
+        "participant": {
+            "id": 700,
+            "name": "Seth Berger",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "38",
+        "action": "speech_off",
+        "timestamp": {
+            "absolute": "2025-09-14T08:45:00.000000Z",
+            "relative": 2700.0
+        },
+        "participant": {
+            "id": 700,
+            "name": "Seth Berger",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "39",
+        "action": "speech_on",
+        "timestamp": {
+            "absolute": "2025-09-14T08:45:00.100000Z",
+            "relative": 2700.1
+        },
+        "participant": {
+            "id": 100,
+            "name": "Wayne Haber",
+            "is_host": True,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "40",
+        "action": "speech_off",
+        "timestamp": {
+            "absolute": "2025-09-14T08:50:00.000000Z",
+            "relative": 3000.0
+        },
+        "participant": {
+            "id": 100,
+            "name": "Wayne Haber",
+            "is_host": True,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "41",
+        "action": "leave",
+        "timestamp": {
+            "absolute": "2025-09-14T08:50:30.000000Z",
+            "relative": 3030.0
+        },
+        "participant": {
+            "id": 100,
+            "name": "Wayne Haber",
+            "is_host": True,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "42",
+        "action": "leave",
+        "timestamp": {
+            "absolute": "2025-09-14T08:51:00.000000Z",
+            "relative": 3060.0
+        },
+        "participant": {
+            "id": 1000,
+            "name": "Alan",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "43",
+        "action": "leave",
+        "timestamp": {
+            "absolute": "2025-09-14T08:51:30.000000Z",
+            "relative": 3090.0
+        },
+        "participant": {
+            "id": 800,
+            "name": "Phil Calder",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "44",
+        "action": "leave",
+        "timestamp": {
+            "absolute": "2025-09-14T08:52:00.000000Z",
+            "relative": 3120.0
+        },
+        "participant": {
+            "id": 900,
+            "name": "Mon Ray",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "45",
+        "action": "leave",
+        "timestamp": {
+            "absolute": "2025-09-14T08:52:30.000000Z",
+            "relative": 3150.0
+        },
+        "participant": {
+            "id": 500,
+            "name": "Neil McCorrison",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "46",
+        "action": "leave",
+        "timestamp": {
+            "absolute": "2025-09-14T08:53:00.000000Z",
+            "relative": 3180.0
+        },
+        "participant": {
+            "id": 200,
+            "name": "Thomas Woodham",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "47",
+        "action": "leave",
+        "timestamp": {
+            "absolute": "2025-09-14T08:53:30.000000Z",
+            "relative": 3210.0
+        },
+        "participant": {
+            "id": 300,
+            "name": "Jay Swain",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "48",
+        "action": "leave",
+        "timestamp": {
+            "absolute": "2025-09-14T08:54:00.000000Z",
+            "relative": 3240.0
+        },
+        "participant": {
+            "id": 400,
+            "name": "Amar Patel",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "49",
+        "action": "leave",
+        "timestamp": {
+            "absolute": "2025-09-14T08:54:30.000000Z",
+            "relative": 3270.0
+        },
+        "participant": {
+            "id": 600,
+            "name": "Fernando Diaz",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw="
+                }
+            }
+        },
+        "data": None
+    },
+    {
+        "id": "50",
+        "action": "leave",
+        "timestamp": {
+            "absolute": "2025-09-14T08:55:00.000000Z",
+            "relative": 3300.0
+        },
+        "participant": {
+            "id": 700,
+            "name": "Seth Berger",
+            "is_host": False,
+            "platform": "unknown",
+            "extra_data": {
+                "google_meet": {
+                    "static_participant_id": "uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk="
+                }
+            }
+        },
+        "data": None
+    }
+]
+processed events list :
+[{'id': '1', 'action': 'join', 'timestamp': {'absolute': '2025-09-14T08:00:00.000000Z', 'relative': 0}, 'name': 'Wayne Haber', 'is_host': True, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'id': '2', 'action': 'speech_on', 'timestamp': {'absolute': '2025-09-14T08:00:00.500000Z', 'relative': 0.5}, 'name': 'Wayne Haber', 'is_host': True, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'id': '3', 'action': 'join', 'timestamp': {'absolute': '2025-09-14T08:00:30.000000Z', 'relative': 30.0}, 'name': 'Alan', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '4', 'action': 'join', 'timestamp': {'absolute': '2025-09-14T08:01:00.000000Z', 'relative': 60.0}, 'name': 'Phil Calder', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '5', 'action': 'join', 'timestamp': {'absolute': '2025-09-14T08:02:00.000000Z', 'relative': 120.0}, 'name': 'Mon Ray', 'is_host': False, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'id': '6', 'action': 'speech_off', 'timestamp': {'absolute': '2025-09-14T08:04:30.000000Z', 'relative': 270.0}, 'name': 'Wayne Haber', 'is_host': True, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'id': '7', 'action': 'speech_on', 'timestamp': {'absolute': '2025-09-14T08:04:30.100000Z', 'relative': 270.1}, 'name': 'Mon Ray', 'is_host': False, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'id': '8', 'action': 'speech_off', 'timestamp': {'absolute': '2025-09-14T08:05:00.000000Z', 'relative': 300.0}, 'name': 'Mon Ray', 'is_host': False, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'id': '9', 'action': 'speech_on', 'timestamp': {'absolute': '2025-09-14T08:05:00.100000Z', 'relative': 300.1}, 'name': 'Wayne Haber', 'is_host': True, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'id': '10', 'action': 'join', 'timestamp': {'absolute': '2025-09-14T08:06:00.000000Z', 'relative': 360.0}, 'name': 'Neil McCorrison', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '11', 'action': 'speech_off', 'timestamp': {'absolute': '2025-09-14T08:08:00.000000Z', 'relative': 480.0}, 'name': 'Wayne Haber', 'is_host': True, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'id': '12', 'action': 'speech_on', 'timestamp': {'absolute': '2025-09-14T08:08:00.100000Z', 'relative': 480.1}, 'name': 'Neil McCorrison', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '13', 'action': 'speech_off', 'timestamp': {'absolute': '2025-09-14T08:09:30.000000Z', 'relative': 570.0}, 'name': 'Neil McCorrison', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '14', 'action': 'speech_on', 'timestamp': {'absolute': '2025-09-14T08:09:30.100000Z', 'relative': 570.1}, 'name': 'Wayne Haber', 'is_host': True, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'id': '15', 'action': 'speech_off', 'timestamp': {'absolute': '2025-09-14T08:10:30.000000Z', 'relative': 630.0}, 'name': 'Wayne Haber', 'is_host': True, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'id': '16', 'action': 'speech_on', 'timestamp': {'absolute': '2025-09-14T08:10:30.100000Z', 'relative': 630.1}, 'name': 'Phil Calder', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '17', 'action': 'speech_off', 'timestamp': {'absolute': '2025-09-14T08:12:30.000000Z', 'relative': 750.0}, 'name': 'Phil Calder', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '18', 'action': 'speech_on', 'timestamp': {'absolute': '2025-09-14T08:12:30.100000Z', 'relative': 750.1}, 'name': 'Thomas Woodham', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '19', 'action': 'join', 'timestamp': {'absolute': '2025-09-14T08:13:00.000000Z', 'relative': 780.0}, 'name': 'Thomas Woodham', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '20', 'action': 'speech_off', 'timestamp': {'absolute': '2025-09-14T08:15:00.000000Z', 'relative': 900.0}, 'name': 'Thomas Woodham', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '21', 'action': 'speech_on', 'timestamp': {'absolute': '2025-09-14T08:15:00.100000Z', 'relative': 900.1}, 'name': 'Wayne Haber', 'is_host': True, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'id': '22', 'action': 'join', 'timestamp': {'absolute': '2025-09-14T08:18:00.000000Z', 'relative': 1080.0}, 'name': 'Jay Swain', 'is_host': False, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'id': '23', 'action': 'speech_off', 'timestamp': {'absolute': '2025-09-14T08:20:00.000000Z', 'relative': 1200.0}, 'name': 'Wayne Haber', 'is_host': True, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'id': '24', 'action': 'speech_on', 'timestamp': {'absolute': '2025-09-14T08:20:00.100000Z', 'relative': 1200.1}, 'name': 'Jay Swain', 'is_host': False, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'id': '25', 'action': 'speech_off', 'timestamp': {'absolute': '2025-09-14T08:21:30.000000Z', 'relative': 1290.0}, 'name': 'Jay Swain', 'is_host': False, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'id': '26', 'action': 'speech_on', 'timestamp': {'absolute': '2025-09-14T08:21:30.100000Z', 'relative': 1290.1}, 'name': 'Neil McCorrison', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '27', 'action': 'join', 'timestamp': {'absolute': '2025-09-14T08:22:00.000000Z', 'relative': 1320.0}, 'name': 'Amar Patel', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '28', 'action': 'speech_off', 'timestamp': {'absolute': '2025-09-14T08:23:00.000000Z', 'relative': 1380.0}, 'name': 'Neil McCorrison', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '29', 'action': 'speech_on', 'timestamp': {'absolute': '2025-09-14T08:23:00.100000Z', 'relative': 1380.1}, 'name': 'Amar Patel', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '30', 'action': 'speech_off', 'timestamp': {'absolute': '2025-09-14T08:24:30.000000Z', 'relative': 1470.0}, 'name': 'Amar Patel', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '31', 'action': 'speech_on', 'timestamp': {'absolute': '2025-09-14T08:24:30.100000Z', 'relative': 1470.1}, 'name': 'Thomas Woodham', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '32', 'action': 'join', 'timestamp': {'absolute': '2025-09-14T08:35:00.000000Z', 'relative': 2100.0}, 'name': 'Fernando Diaz', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '33', 'action': 'speech_off', 'timestamp': {'absolute': '2025-09-14T08:35:30.000000Z', 'relative': 2130.0}, 'name': 'Thomas Woodham', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '34', 'action': 'speech_on', 'timestamp': {'absolute': '2025-09-14T08:35:30.100000Z', 'relative': 2130.1}, 'name': 'Fernando Diaz', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '35', 'action': 'join', 'timestamp': {'absolute': '2025-09-14T08:40:00.000000Z', 'relative': 2400.0}, 'name': 'Seth Berger', 'is_host': False, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'id': '36', 'action': 'speech_off', 'timestamp': {'absolute': '2025-09-14T08:42:00.000000Z', 'relative': 2520.0}, 'name': 'Fernando Diaz', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '37', 'action': 'speech_on', 'timestamp': {'absolute': '2025-09-14T08:42:00.100000Z', 'relative': 2520.1}, 'name': 'Seth Berger', 'is_host': False, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'id': '38', 'action': 'speech_off', 'timestamp': {'absolute': '2025-09-14T08:45:00.000000Z', 'relative': 2700.0}, 'name': 'Seth Berger', 'is_host': False, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'id': '39', 'action': 'speech_on', 'timestamp': {'absolute': '2025-09-14T08:45:00.100000Z', 'relative': 2700.1}, 'name': 'Wayne Haber', 'is_host': True, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'id': '40', 'action': 'speech_off', 'timestamp': {'absolute': '2025-09-14T08:50:00.000000Z', 'relative': 3000.0}, 'name': 'Wayne Haber', 'is_host': True, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'id': '41', 'action': 'leave', 'timestamp': {'absolute': '2025-09-14T08:50:30.000000Z', 'relative': 3030.0}, 'name': 'Wayne Haber', 'is_host': True, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'id': '42', 'action': 'leave', 'timestamp': {'absolute': '2025-09-14T08:51:00.000000Z', 'relative': 3060.0}, 'name': 'Alan', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '43', 'action': 'leave', 'timestamp': {'absolute': '2025-09-14T08:51:30.000000Z', 'relative': 3090.0}, 'name': 'Phil Calder', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '44', 'action': 'leave', 'timestamp': {'absolute': '2025-09-14T08:52:00.000000Z', 'relative': 3120.0}, 'name': 'Mon Ray', 'is_host': False, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'id': '45', 'action': 'leave', 'timestamp': {'absolute': '2025-09-14T08:52:30.000000Z', 'relative': 3150.0}, 'name': 'Neil McCorrison', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '46', 'action': 'leave', 'timestamp': {'absolute': '2025-09-14T08:53:00.000000Z', 'relative': 3180.0}, 'name': 'Thomas Woodham', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '47', 'action': 'leave', 'timestamp': {'absolute': '2025-09-14T08:53:30.000000Z', 'relative': 3210.0}, 'name': 'Jay Swain', 'is_host': False, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}, {'id': '48', 'action': 'leave', 'timestamp': {'absolute': '2025-09-14T08:54:00.000000Z', 'relative': 3240.0}, 'name': 'Amar Patel', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '49', 'action': 'leave', 'timestamp': {'absolute': '2025-09-14T08:54:30.000000Z', 'relative': 3270.0}, 'name': 'Fernando Diaz', 'is_host': False, 'static_participant_id': 'cf3v3UGX24UVwXWZ4buVb-gOfl0GdLD_679YAFAGqpw='}, {'id': '50', 'action': 'leave', 'timestamp': {'absolute': '2025-09-14T08:55:00.000000Z', 'relative': 3300.0}, 'name': 'Seth Berger', 'is_host': False, 'static_participant_id': 'uyzXC7wF9AlhqPsbdmPXyPrkNpjvitVSyBM_D2rgEZk='}]

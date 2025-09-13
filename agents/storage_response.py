@@ -45,6 +45,15 @@ async def storage_response_node(state: Dict[str, Any]) -> Dict[str, Any]:
         elif content_detected and content_ids:
             logger.debug(f"Generated content successfully created with IDs: {content_ids}")
 
+        # Check if performance records were created successfully (always attempted)
+        performance_ids = initial_ids.get("performance_record_ids", [])
+        if not performance_ids:
+            success = False
+            failed_operations.append("performance records")
+            logger.error("Performance records creation failed - no record IDs returned")
+        else:
+            logger.debug(f"Performance records successfully created with IDs: {performance_ids}")
+
         # Generate appropriate response message
         if success:
             message = "Pipeline completed successfully - all operations succeeded"
@@ -54,6 +63,8 @@ async def storage_response_node(state: Dict[str, Any]) -> Dict[str, Any]:
                 message += f". {len(task_ids)} tasks created"
             if content_ids:
                 message += f". {len(content_ids)} content items created"
+            if performance_ids:
+                message += f". {len(performance_ids)} performance records created"
         else:
             if len(failed_operations) == 1:
                 message = f"Pipeline partially completed - failed to process {failed_operations[0]}"
@@ -69,16 +80,18 @@ async def storage_response_node(state: Dict[str, Any]) -> Dict[str, Any]:
                 "summary_id": summary_id,
                 "task_ids": task_ids,
                 "content_ids": content_ids,
+                "performance_record_ids": performance_ids,
                 "failed_operations": failed_operations,
                 "operations_performed": {
                     "summary": "updated" if summary_id else "failed",
                     "tasks": "created" if task_ids else ("not_needed" if not tasks_detected else "failed"),
-                    "content": "created" if content_ids else ("not_needed" if not content_detected else "failed")
+                    "content": "created" if content_ids else ("not_needed" if not content_detected else "failed"),
+                    "performance": "created" if performance_ids else "failed"
                 }
             }
         }
         
-        logger.info(f"Storage response completed: success={success}, summary_id={summary_id}, task_count={len(task_ids)}, content_count={len(content_ids)}")
+        logger.info(f"Storage response completed: success={success}, summary_id={summary_id}, task_count={len(task_ids)}, content_count={len(content_ids)}, performance_count={len(performance_ids)}")
 
         # Update state with final response
         updated_state = state.copy()
@@ -100,6 +113,7 @@ async def storage_response_node(state: Dict[str, Any]) -> Dict[str, Any]:
                 "summary_id": initial_ids.get("summary_id", ""),
                 "task_ids": initial_ids.get("task_ids", []),
                 "content_ids": initial_ids.get("content_ids", []),
+                "performance_record_ids": initial_ids.get("performance_record_ids", []),
                 "failed_operations": ["storage_response"],
                 "error": str(e)
             }
