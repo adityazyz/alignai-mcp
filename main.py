@@ -67,23 +67,20 @@ def create_workflow():
     workflow.add_node("transcription_processing", transcription_node)
     workflow.add_node("analysis", analysis_node)
     workflow.add_node("parallel_coordinator", parallel_coordinator_node)
-    workflow.add_node("summary_generation", summary_generation_node)
-    workflow.add_node("performance_records", performance_records_node)
     workflow.add_node("storage_response", storage_response_node)
     
     # Set entry point
     workflow.set_entry_point("data_fetching")
     
-    # Create flow that includes summary_generation_node after parallel_coordinator
+    # Create simplified flow - summary and performance are now handled in parallel coordinator
     workflow.add_edge("data_fetching", "transcription_processing")
     workflow.add_edge("transcription_processing", "analysis")
     workflow.add_edge("analysis", "parallel_coordinator")
-    workflow.add_edge("parallel_coordinator", "summary_generation")
-    workflow.add_edge("summary_generation", "performance_records")
-    workflow.add_edge("performance_records", "storage_response")
+    workflow.add_edge("parallel_coordinator", "storage_response")
     workflow.add_edge("storage_response", END)
     
     return workflow.compile()
+
 
 async def sse_generator(meeting_id: str, state: Dict[str, Any]):
     workflow = create_workflow()
